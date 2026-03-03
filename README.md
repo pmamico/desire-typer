@@ -1,4 +1,4 @@
-# desire statement typer
+# Desire Statement Typer
 
 Desire statement typing in your terminal.
 
