@@ -10,16 +10,22 @@ This project is inspired by the “Desire Statement” mental training tool from
 
 ## Install
 
-PyPI package name is `typer-cli-tool` (it installs the `desire` CLI):
+Local install (until the package is published on PyPI):
 
 ```bash
-python -m pip install --upgrade typer-cli-tool
+python3 -m pip install -e .
 ```
 
 `pipx` also works well for CLI tools:
 
 ```bash
-pipx install typer-cli-tool
+pipx install .
+```
+
+PyPI install (after publishing; it installs the `desire` CLI):
+
+```bash
+python3 -m pip install --upgrade desire-typer
 ```
 
 Homebrew is not supported yet.
@@ -72,7 +78,7 @@ does the work even when I do not feel like it.
 ## Update
 
 ```bash
-python -m pip install --upgrade typer-cli-tool
+python3 -m pip install --upgrade desire-typer
 ```
 
 ## Platform Notes
