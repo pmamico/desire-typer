@@ -4,6 +4,10 @@ Desire statement typing in your terminal.
 
 You maintain a folder of desire statements under `~/.statements/`. The app picks one at random and you type it out.
 
+## Inspiration
+
+This project is inspired by the “Desire Statement” mental training tool from Kenneth Baum’s *The Mental Edge* (1999): a short, specific statement of what you truly want, revisited often to keep motivation and focus high. Reference: [The Mental Edge (Heroic summary)](https://legacy.heroic.us/pn/the-mental-edge-kenneth-baum#hows-your-desire)
+
 ## Install
 
 PyPI package name is `typer-cli-tool` (it installs the `desire` CLI):
