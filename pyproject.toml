@@ -9,7 +9,7 @@ description = "Desire statement typing in your terminal."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.8"
-authors = [{ name = "Will Gerstung" }]
+authors = [{ name = "Mico Papp" }]
 dependencies = [
     "windows-curses>=2.3; sys_platform == 'win32'",
 ]
@@ -37,4 +37,6 @@ include = ["typer_cli*", "desire*"]
 desire = "desire.main:entry"
 
 [project.urls]
-Homepage = "https://github.com/William-Ger/typer"
+Homepage = "https://github.com/pmamico/desire-typer"
+Repository = "https://github.com/pmamico/desire-typer"
+Issues = "https://github.com/pmamico/desire-typer/issues"

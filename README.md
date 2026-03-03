@@ -2,68 +2,76 @@
 
 Desire statement typing in your terminal.
 
-Put your desire statements into files under `~/.statements/` (one statement per non-empty line). For multi-line statements, end the line with `\` to continue on the next line. The app picks one at random and uses it as the typing text.
+You maintain a folder of desire statements under `~/.statements/`. The app picks one at random and you type it out.
 
 ## Install
 
-**Homebrew** (macOS/Linux):
+PyPI package name is `typer-cli-tool` (it installs the `desire` CLI):
 
-```
-brew tap William-Ger/typer
-brew install desire
-```
-
-**pip**:
-
-```
-pip install typer-cli-tool
+```bash
+python -m pip install --upgrade typer-cli-tool
 ```
 
-Then just run:
+`pipx` also works well for CLI tools:
 
+```bash
+pipx install typer-cli-tool
 ```
+
+Homebrew is not supported yet.
+
+## Run
+
+```bash
 desire
 ```
 
-## Usage
+Or, if you prefer module execution:
 
+```bash
+python -m desire
 ```
-desire              # start practicing
+
+## Statements Folder
+
+- Location: `~/.statements/`
+- One statement per non-empty line
+- Multi-line statements: end the line with a trailing `\` to continue on the next line
+- Lines starting with `#` are ignored
+
+Example `~/.statements/my_statements.txt`:
+
+```text
+# one-liners
+I treat my time with respect.
+I finish what I start.
+
+# multi-line (note the trailing backslash)
+I am the kind of person who \
+does the work even when I do not feel like it.
 ```
 
 ## Controls
 
-| Key       | Action              |
-|-----------|---------------------|
-| `tab`     | restart / home      |
-| `ctrl+q`  | quit                |
-| `←` `→`  | change time         |
-| `↑` `↓`  | change difficulty   |
-| `click`   | click time/difficulty|
-| `s`       | stats               |
+| Key   | Action |
+|------:|--------|
+| `tab` | new statement |
+| `esc` | quit |
+| `s`   | stats |
+| `t`   | cycle theme |
 
-## Features
+## Data Storage
 
-- Random desire statement from `~/.statements/`
-- Repetition counter (how many times you completed the statement)
-- Personal stats: best WPM, streaks, per-difficulty averages, sparkline
-- User profiles stored locally at `~/.config/typer/`
-- Passive update check — shows update command if a new version is available
+- Statements: `~/.statements/`
+- Local profile/stats: `~/.config/typer/profile.json` (legacy path name)
 
 ## Update
 
-Homebrew:
-
-```
-brew update && brew upgrade desire
+```bash
+python -m pip install --upgrade typer-cli-tool
 ```
 
-pip:
+## Platform Notes
 
-```
-pip install --upgrade typer-cli-tool
-```
-
-## Zero dependencies
-
-Pure Python. Only uses `curses` (built-in). Works on macOS and Linux out of the box.
+- macOS/Linux: uses stdlib `curses`
+- Windows: requires `windows-curses` (declared as a conditional dependency in `pyproject.toml`)
