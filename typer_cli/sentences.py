@@ -1,7 +1,137 @@
-"""Template grammar sentence generator."""
+"""Text generator.
 
+Primary mode: pick a random desire statement from user-managed files in
+`~/.statements/`.
+
+Fallback: template-grammar sentence generator (original behavior) when no
+statements are found.
+"""
+
+import os
 import random
+from pathlib import Path
+import re
+
 from typer_cli.words import get_pools
+
+
+STATEMENTS_DIR = Path(os.path.expanduser("~/.statements"))
+
+_STATEMENT_BAG = None
+_STATEMENT_IDX = 0
+
+
+def _norm_spaces(s):
+    return " ".join(s.split()).strip()
+
+
+def _extract_statement_payload(line):
+    line = re.sub(r"^\s*\d+:\s+", "", line).strip()
+    if not line:
+        return ""
+
+    # If the line contains an explicit statement marker (common in logs), take
+    # everything after the last occurrence.
+    d_matches = list(re.finditer(r"\bD:\s*", line))
+    if d_matches:
+        line = line[d_matches[-1].end():].strip()
+    else:
+        # Ignore other log-like prefixes such as "I: ...", "X: ...".
+        if re.match(r"^[A-Z]:\s+", line):
+            return ""
+
+    return _norm_spaces(line)
+
+
+def _is_noise_statement(s):
+    low = s.lower()
+    noise_substrings = (
+        "desire statement",
+        "(pool",
+        "pool)",
+        "readme",
+        "license",
+        "https",
+        "ssh",
+        "github",
+        "cli",
+        "wpm",
+        "acc",
+        "typed=",
+        "gepel",
+        "gépel",
+        "ctrl",
+        "esc",
+        "tab",
+        "theme",
+        "typing",
+    )
+    if any(x in low for x in noise_substrings):
+        return True
+
+    if re.fullmatch(r"[A-Z]{2,}(\s+[A-Z]{2,})+", s.strip()):
+        return True
+
+    return False
+
+
+def _parse_statements(text):
+    """Parse statements from a file.
+
+    - Default: one non-empty line = one statement.
+    - Multi-line: end a line with a trailing '\\' to continue on next line.
+    - Lines starting with '#' are ignored.
+    - Common pasted line-number prefixes like '12: ' are stripped.
+    """
+    statements = []
+    buf = []
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if line.startswith("#"):
+            continue
+
+        line = _extract_statement_payload(line)
+        if not line:
+            continue
+
+        if line.endswith("\\"):
+            buf.append(line[:-1].rstrip())
+            continue
+
+        if buf:
+            buf.append(line)
+            s = _norm_spaces(" ".join(buf))
+            if s:
+                statements.append(s)
+            buf = []
+        else:
+            statements.append(_norm_spaces(line))
+
+    if buf:
+        s = _norm_spaces(" ".join(buf))
+        if s:
+            statements.append(s)
+    return statements
+
+
+def _load_statements(dir_path=STATEMENTS_DIR):
+    if not dir_path.exists() or not dir_path.is_dir():
+        return []
+
+    out = []
+    for p in sorted(dir_path.iterdir()):
+        if not p.is_file():
+            continue
+        try:
+            text = p.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        out.extend(_parse_statements(text))
+
+    out = [s for s in out if s and s.split() and not _is_noise_statement(s)]
+    return out
 
 
 # ── slot filler ──────────────────────────────────────────────────────────────
@@ -374,7 +504,7 @@ TEMPLATES = {
 _bags = {}
 
 
-def generate(count=80, difficulty="medium"):
+def _generate_from_templates(count=80, difficulty="medium"):
     """Generate natural sentences totaling approximately `count` words.
 
     Uses a shuffle-bag so every template is used once before any repeats.
@@ -406,3 +536,46 @@ def generate(count=80, difficulty="medium"):
 
     _bags[difficulty] = (bag, idx)
     return " ".join(sentences)
+
+
+def generate(count=80, difficulty="medium"):
+    """Generate the target text.
+
+    If `~/.statements/` contains any desire statements, pick one at random and
+    repeat it to reach roughly `count` words. Otherwise, fall back to the
+    template generator.
+    """
+    global _STATEMENT_BAG
+    global _STATEMENT_IDX
+
+    statements = _load_statements()
+    if not statements:
+        return _generate_from_templates(count, difficulty)
+
+    if _STATEMENT_BAG is None or set(_STATEMENT_BAG) != set(statements) or _STATEMENT_IDX >= len(_STATEMENT_BAG):
+        _STATEMENT_BAG = list(statements)
+        random.shuffle(_STATEMENT_BAG)
+        _STATEMENT_IDX = 0
+
+    parts = []
+    total_words = 0
+    last = None
+    while total_words < count:
+        if _STATEMENT_IDX >= len(_STATEMENT_BAG):
+            random.shuffle(_STATEMENT_BAG)
+            _STATEMENT_IDX = 0
+
+        s = _STATEMENT_BAG[_STATEMENT_IDX]
+        _STATEMENT_IDX += 1
+        if not s or not s.split():
+            continue
+        if last is not None and s == last and len(_STATEMENT_BAG) > 1:
+            continue
+
+        parts.append(s)
+        total_words += len(s.split())
+        last = s
+
+    if not parts:
+        return _generate_from_templates(count, difficulty)
+    return " ".join(parts)

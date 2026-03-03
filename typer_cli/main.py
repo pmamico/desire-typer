@@ -239,6 +239,10 @@ def test(scr, ti, di, update_info=None, theme_name="default"):
     t0 = 0.0
 
     settings_y = 0
+    logo_y = 0
+    timer_y = 0
+    stats_y = 0
+    hint_y = 0
     hit_regions = []
     user_name = read_profile().get("name", "")
 
@@ -290,7 +294,7 @@ def test(scr, ti, di, update_info=None, theme_name="default"):
             if update_info and update_info["update_available"]:
                 notice = f"v{update_info['latest']} available: {update_info['update_cmd']}"
                 putc(scr, h - 2, w, notice, C_BAD)
-            putc(scr, h - 1, w, "s stats   t theme   tab new words   esc quit", C_HINT)
+            putc(scr, h - 1, w, "s stats   t theme   tab new statement   esc quit", C_HINT)
             ver = f"v{update_info['version']}" if update_info else ""
             if ver:
                 put(scr, h - 1, 1, ver, C_DIM)
@@ -774,7 +778,7 @@ def run(scr, args):
 def entry():
     parser = argparse.ArgumentParser(
         prog="typer",
-        description="typer — typing practice in your terminal",
+        description="typer — desire statement typing in your terminal",
     )
     parser.add_argument("-t", "--time", type=int, metavar="SEC",
                         help="time in seconds (15, 30, 60, 120)")

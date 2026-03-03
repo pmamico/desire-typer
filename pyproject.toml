@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "typer-cli-tool"
 version = "0.6.0"
-description = "Typing practice in your terminal. Like monkeytype, but in the CLI."
+description = "Desire statement typing in your terminal."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.8"
@@ -17,6 +17,7 @@ keywords = [
     "typing", "typing-test", "typing-speed", "typing-practice",
     "wpm", "terminal", "cli", "monkeytype", "speed-typing",
     "keyboard", "curses", "typing-game", "touch-typing",
+    "desire", "statements",
 ]
 classifiers = [
     "Environment :: Console :: Curses",

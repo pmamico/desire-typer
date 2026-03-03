@@ -1,6 +1,8 @@
-# typer
+# desire-typer
 
-Typing practice in your terminal. Like [monkeytype](https://monkeytype.com), but in the CLI.
+Desire statement typing in your terminal.
+
+Put your desire statements into files under `~/.statements/` (one statement per non-empty line). For multi-line statements, end the line with `\` to continue on the next line. The app picks one at random and uses it as the typing text.
 
 ## Install
 
@@ -46,6 +48,7 @@ typer -t 15 -d easy # quick easy warmup
 
 ## Features
 
+- Random desire statement from `~/.statements/`
 - Timed tests: 15s, 30s, 60s, 120s
 - Three difficulty levels (easy, medium, hard)
 - Live WPM and accuracy while typing
