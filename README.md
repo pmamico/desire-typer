@@ -1,4 +1,4 @@
-# desire-typer
+# desire statement typer
 
 Desire statement typing in your terminal.
 
@@ -10,7 +10,7 @@ Put your desire statements into files under `~/.statements/` (one statement per 
 
 ```
 brew tap William-Ger/typer
-brew install typer
+brew install desire
 ```
 
 **pip**:
@@ -22,17 +22,13 @@ pip install typer-cli-tool
 Then just run:
 
 ```
-typer
+desire
 ```
 
 ## Usage
 
 ```
-typer              # 30s medium (default)
-typer -t 15        # 15 second test
-typer -t 60        # 60 second test
-typer -d hard      # hard difficulty
-typer -t 15 -d easy # quick easy warmup
+desire              # start practicing
 ```
 
 ## Controls
@@ -49,9 +45,7 @@ typer -t 15 -d easy # quick easy warmup
 ## Features
 
 - Random desire statement from `~/.statements/`
-- Timed tests: 15s, 30s, 60s, 120s
-- Three difficulty levels (easy, medium, hard)
-- Live WPM and accuracy while typing
+- Repetition counter (how many times you completed the statement)
 - Personal stats: best WPM, streaks, per-difficulty averages, sparkline
 - User profiles stored locally at `~/.config/typer/`
 - Passive update check — shows update command if a new version is available
@@ -61,7 +55,7 @@ typer -t 15 -d easy # quick easy warmup
 Homebrew:
 
 ```
-brew update && brew upgrade typer
+brew update && brew upgrade desire
 ```
 
 pip:

@@ -7,7 +7,7 @@ from datetime import date, datetime, timedelta
 PROFILE_DIR = os.path.expanduser("~/.config/typer")
 PROFILE_FILE = os.path.join(PROFILE_DIR, "profile.json")
 
-_DEFAULT = {"name": "", "created": "", "tests": []}
+_DEFAULT = {"name": "", "created": "", "tests": [], "statements": []}
 
 
 def profile_exists():
@@ -68,6 +68,16 @@ def append_test(result, time_limit, difficulty):
         "time_limit": time_limit,
         "difficulty": difficulty,
         "elapsed": result["time"],
+    })
+    write_profile(p)
+
+
+def append_statement(statement):
+    p = read_profile()
+    p.setdefault("statements", [])
+    p["statements"].append({
+        "ts": datetime.now().isoformat(),
+        "statement": statement,
     })
     write_profile(p)
 
@@ -139,6 +149,7 @@ def _fmt_date_short(iso_str):
 
 def compute_stats(profile):
     tests = profile.get("tests", [])
+    statements = profile.get("statements", [])
     name = profile.get("name", "")
     created = profile.get("created", "")
 
@@ -155,7 +166,30 @@ def compute_stats(profile):
         "sparkline": "",
         "per_diff": {},
         "streak": 0,
+        "statements_completed": len(statements),
+        "statements_today": 0,
+        "statements_streak": 0,
     }
+
+    today = date.today()
+    stmt_dates = set()
+    for ev in statements:
+        ts = ev.get("ts", "")
+        try:
+            d = date.fromisoformat(ts[:10])
+        except (ValueError, TypeError):
+            continue
+        stmt_dates.add(d)
+        if d == today:
+            s["statements_today"] += 1
+
+    if stmt_dates:
+        day = today if today in stmt_dates else max(stmt_dates)
+        streak = 0
+        while day in stmt_dates:
+            streak += 1
+            day -= timedelta(days=1)
+        s["statements_streak"] = streak
 
     if not tests:
         return s

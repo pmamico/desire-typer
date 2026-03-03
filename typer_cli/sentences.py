@@ -30,6 +30,10 @@ def _extract_statement_payload(line):
     if not line:
         return ""
 
+    low = line.lower()
+    if any(x in low for x in ("last=", "typed=", "wpm", "acc")):
+        return ""
+
     # If the line contains an explicit statement marker (common in logs), take
     # everything after the last occurrence.
     d_matches = list(re.finditer(r"\bD:\s*", line))
@@ -541,9 +545,8 @@ def _generate_from_templates(count=80, difficulty="medium"):
 def generate(count=80, difficulty="medium"):
     """Generate the target text.
 
-    If `~/.statements/` contains any desire statements, pick one at random and
-    repeat it to reach roughly `count` words. Otherwise, fall back to the
-    template generator.
+    If `~/.statements/` contains any desire statements, pick one at random.
+    Otherwise, fall back to the template generator.
     """
     global _STATEMENT_BAG
     global _STATEMENT_IDX
@@ -557,25 +560,12 @@ def generate(count=80, difficulty="medium"):
         random.shuffle(_STATEMENT_BAG)
         _STATEMENT_IDX = 0
 
-    parts = []
-    total_words = 0
-    last = None
-    while total_words < count:
-        if _STATEMENT_IDX >= len(_STATEMENT_BAG):
-            random.shuffle(_STATEMENT_BAG)
-            _STATEMENT_IDX = 0
+    if _STATEMENT_IDX >= len(_STATEMENT_BAG):
+        random.shuffle(_STATEMENT_BAG)
+        _STATEMENT_IDX = 0
 
-        s = _STATEMENT_BAG[_STATEMENT_IDX]
-        _STATEMENT_IDX += 1
-        if not s or not s.split():
-            continue
-        if last is not None and s == last and len(_STATEMENT_BAG) > 1:
-            continue
-
-        parts.append(s)
-        total_words += len(s.split())
-        last = s
-
-    if not parts:
+    statement = _STATEMENT_BAG[_STATEMENT_IDX]
+    _STATEMENT_IDX += 1
+    if not statement:
         return _generate_from_templates(count, difficulty)
-    return " ".join(parts)
+    return statement

@@ -1,4 +1,4 @@
-# typer — Project Guide
+# desire statement typer — Project Guide
 
 ## Overview
 
@@ -7,7 +7,7 @@ Terminal-based typing practice tool (like monkeytype for the CLI). Pure Python, 
 ## Repositories
 
 ### William-Ger/typer (this repo)
-The main application. Published to PyPI as `typer-cli-tool`. Entry point is `typer` command.
+The main application. Published to PyPI as `typer-cli-tool`. Entry point is `desire` command (or `python -m desire`).
 
 ### William-Ger/homebrew-typer
 The Homebrew tap. Contains a single formula at `Formula/typer.rb` that installs via `brew tap William-Ger/typer && brew install typer`. This is a separate repo — when releasing, you must update it too.
@@ -15,6 +15,10 @@ The Homebrew tap. Contains a single formula at `Formula/typer.rb` that installs 
 ## Project Structure
 
 ```
+desire/
+  __init__.py      # version number alias (__version__)
+  __main__.py      # python -m desire support
+  main.py          # console script entrypoint (delegates to typer_cli)
 typer_cli/
   __init__.py      # version number (__version__)
   __main__.py      # python -m typer_cli support
@@ -37,12 +41,12 @@ pyproject.toml     # package metadata, version, entry point
 ## Install Methods
 
 Users install one of three ways:
-1. **Homebrew**: `brew tap William-Ger/typer && brew install typer`
+1. **Homebrew**: `brew tap William-Ger/typer && brew install desire`
 2. **pip (from PyPI)**: `pip install typer-cli-tool`
 3. **pipx (recommended for CLI tools)**: `pipx install typer-cli-tool`
 
 Update commands:
-- Homebrew: `brew update && brew upgrade typer` (must include `brew update` to refresh the tap)
+- Homebrew: `brew update && brew upgrade desire` (must include `brew update` to refresh the tap)
 - pip/pipx: `pip install --upgrade typer-cli-tool`
 
 The package is published on PyPI as `typer-cli-tool`.
@@ -97,7 +101,7 @@ All 6 steps are required. If you skip step 5, `brew upgrade typer` won't pick up
 
 ## Testing
 
-No test suite currently. To test manually, run `typer` and verify:
+No test suite currently. To test manually, run `desire` and verify:
 - Home screen shows version bottom-left
 - Arrow keys / mouse change settings
 - Typing starts the timer

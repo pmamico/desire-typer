@@ -31,10 +31,10 @@ classifiers = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["typer_cli*"]
+include = ["typer_cli*", "desire*"]
 
 [project.scripts]
-typer = "typer_cli.main:entry"
+desire = "desire.main:entry"
 
 [project.urls]
 Homepage = "https://github.com/William-Ger/typer"
