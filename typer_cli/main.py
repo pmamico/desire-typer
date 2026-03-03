@@ -2,6 +2,7 @@ import curses
 import time
 import argparse
 import sys
+import locale
 
 from typer_cli.sentences import generate
 from typer_cli.update import get_update_info
@@ -10,6 +11,9 @@ from typer_cli.profile import (
     post_race_stats, get_theme, set_theme,
 )
 from typer_cli.themes import THEMES, THEME_NAMES
+
+
+locale.setlocale(locale.LC_ALL, "")
 
 # ── colors ───────────────────────────────────────────────────────────────────
 
@@ -323,10 +327,12 @@ def test(scr, ti, di, update_info=None, theme_name="default"):
         scr.refresh()
 
         # ── input ──
-        k = scr.getch()
-        if k == -1:
+        try:
+            k = scr.get_wch()
+        except curses.error:
             continue
-        if k == 9:  # tab
+
+        if k in (9, "\t"):  # tab
             sys.stdout.write("\033[0 q")
             sys.stdout.flush()
             return "restart", ti, di, theme_name
@@ -358,13 +364,13 @@ def test(scr, ti, di, update_info=None, theme_name="default"):
             continue
 
         if not started:
-            if k == 27:  # esc
+            if k in (27, "\x1b"):  # esc
                 sys.stdout.write("\033[0 q")
                 sys.stdout.flush()
                 return None, ti, di, theme_name
-            if k == ord('s'):
+            if k in (ord('s'), 's'):
                 return "stats", ti, di, theme_name
-            if k == ord('t'):
+            if k in (ord('t'), 't'):
                 idx = THEME_NAMES.index(theme_name)
                 theme_name = THEME_NAMES[(idx + 1) % len(THEME_NAMES)]
                 init_colors(theme_name)
@@ -395,14 +401,14 @@ def test(scr, ti, di, update_info=None, theme_name="default"):
                 continue
 
         # typing
-        if not started and 32 <= k <= 126:
+        if not started and ((isinstance(k, str) and len(k) == 1 and k.isprintable() and k not in ("\x1b",)) or (isinstance(k, int) and 32 <= k <= 126)):
             started = True
             t0 = time.time()
 
-        if k in (curses.KEY_BACKSPACE, 127, 8):
+        if k in (curses.KEY_BACKSPACE, 127, 8, "\b", "\x7f"):
             if typed:
                 typed.pop()
-        elif k == 32 and len(typed) < len(target):
+        elif k in (32, ' ') and len(typed) < len(target):
             pos = len(typed)
             if target[pos] == ' ':
                 typed.append(' ')
@@ -414,8 +420,11 @@ def test(scr, ti, di, update_info=None, theme_name="default"):
                 else:
                     while len(typed) <= next_space and len(typed) < len(target):
                         typed.append(' ')
-        elif 32 <= k <= 126 and len(typed) < len(target):
-            typed.append(chr(k))
+        elif len(typed) < len(target):
+            if isinstance(k, str) and len(k) == 1 and k.isprintable() and k not in ("\x1b",):
+                typed.append(k)
+            elif isinstance(k, int) and 32 <= k <= 126:
+                typed.append(chr(k))
 
     sys.stdout.write("\033[0 q")
     sys.stdout.flush()
