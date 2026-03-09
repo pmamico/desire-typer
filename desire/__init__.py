@@ -3,4 +3,4 @@
 This package exists to provide a stable `python -m desire` entrypoint.
 """
 
-from typer_cli import __version__
+from desire_cli import __version__

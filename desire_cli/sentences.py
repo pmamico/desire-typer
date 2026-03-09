@@ -11,14 +11,23 @@ import os
 import random
 from pathlib import Path
 import re
+from dataclasses import dataclass
+from typing import Optional
 
-from typer_cli.words import get_pools
+from desire_cli.words import get_pools
 
 
 STATEMENTS_DIR = Path(os.path.expanduser("~/.statements"))
 
 _STATEMENT_BAG = None
 _STATEMENT_IDX = 0
+
+
+@dataclass(frozen=True)
+class StatementEntry:
+    text: str
+    source_id: Optional[str] = None
+    source_label: Optional[str] = None
 
 
 def _norm_spaces(s):
@@ -124,7 +133,7 @@ def _load_statements(dir_path=STATEMENTS_DIR):
     if not dir_path.exists() or not dir_path.is_dir():
         return []
 
-    out = []
+    entries = []
     for p in sorted(dir_path.iterdir()):
         if not p.is_file():
             continue
@@ -132,10 +141,11 @@ def _load_statements(dir_path=STATEMENTS_DIR):
             text = p.read_text(encoding="utf-8")
         except OSError:
             continue
-        out.extend(_parse_statements(text))
-
-    out = [s for s in out if s and s.split() and not _is_noise_statement(s)]
-    return out
+        for stmt in _parse_statements(text):
+            if not stmt or not stmt.split() or _is_noise_statement(stmt):
+                continue
+            entries.append(StatementEntry(text=stmt, source_id=p.name, source_label=p.name))
+    return entries
 
 
 # ── slot filler ──────────────────────────────────────────────────────────────
@@ -551,11 +561,22 @@ def generate(count=80, difficulty="medium"):
     global _STATEMENT_BAG
     global _STATEMENT_IDX
 
+    def _fallback_entry():
+        return StatementEntry(
+            text=_generate_from_templates(count, difficulty),
+            source_id="__generated__",
+            source_label="templates",
+        )
+
     statements = _load_statements()
     if not statements:
-        return _generate_from_templates(count, difficulty)
+        return _fallback_entry()
 
-    if _STATEMENT_BAG is None or set(_STATEMENT_BAG) != set(statements) or _STATEMENT_IDX >= len(_STATEMENT_BAG):
+    if (
+        _STATEMENT_BAG is None
+        or set(_STATEMENT_BAG) != set(statements)
+        or _STATEMENT_IDX >= len(_STATEMENT_BAG)
+    ):
         _STATEMENT_BAG = list(statements)
         random.shuffle(_STATEMENT_BAG)
         _STATEMENT_IDX = 0
@@ -564,8 +585,8 @@ def generate(count=80, difficulty="medium"):
         random.shuffle(_STATEMENT_BAG)
         _STATEMENT_IDX = 0
 
-    statement = _STATEMENT_BAG[_STATEMENT_IDX]
+    entry = _STATEMENT_BAG[_STATEMENT_IDX]
     _STATEMENT_IDX += 1
-    if not statement:
-        return _generate_from_templates(count, difficulty)
-    return statement
+    if not entry or not entry.text:
+        return _fallback_entry()
+    return entry

@@ -10,7 +10,13 @@ This project is inspired by the “Desire Statement” mental training tool from
 
 ## Install
 
-Local install (until the package is published on PyPI):
+### pip
+
+```bash
+python3 -m pip install --upgrade desire-typer
+```
+
+### local
 
 ```bash
 python3 -m pip install -e .
@@ -22,13 +28,6 @@ python3 -m pip install -e .
 pipx install .
 ```
 
-PyPI install (after publishing; it installs the `desire` CLI):
-
-```bash
-python3 -m pip install --upgrade desire-typer
-```
-
-Homebrew is not supported yet.
 
 ## Run
 
@@ -63,12 +62,12 @@ does the work even when I do not feel like it.
 
 ## Controls
 
-| Key   | Action |
-|------:|--------|
+|   Key | Action        |
+|------:|---------------|
 | `tab` | new statement |
-| `esc` | quit |
-| `s`   | stats |
-| `t`   | cycle theme |
+| `esc` | quit          |
+|   `s` | stats         |
+|   `t` | cycle theme   |
 
 ## Data Storage
 

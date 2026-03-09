@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "desire-typer"
-version = "0.1.0"
+version = "1.0.0"
 description = "Desire statement typing in your terminal."
 readme = "README.md"
 license = "MIT"
@@ -32,7 +32,7 @@ classifiers = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["typer_cli*", "desire*"]
+include = ["desire_cli*", "desire*"]
 
 [project.scripts]
 desire = "desire.main:entry"

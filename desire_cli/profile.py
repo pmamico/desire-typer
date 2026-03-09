@@ -33,6 +33,7 @@ def create_profile(name):
         "name": name,
         "created": datetime.now().isoformat(),
         "tests": [],
+        "statements": [],
     }
     write_profile(data)
     return data
@@ -72,12 +73,14 @@ def append_test(result, time_limit, difficulty):
     write_profile(p)
 
 
-def append_statement(statement):
+def append_statement(statement, source_id=None, source_label=None):
     p = read_profile()
     p.setdefault("statements", [])
     p["statements"].append({
         "ts": datetime.now().isoformat(),
         "statement": statement,
+        "source_id": source_id,
+        "source_label": source_label,
     })
     write_profile(p)
 
@@ -97,6 +100,34 @@ def _sparkline(wpms):
         idx = min(3, int(norm * 4))
         result.append(chars[idx])
     return " ".join(result)
+
+
+def _inline_plot(counts):
+    if not counts:
+        return ""
+    chars = " .:-=+*#%@"
+    hi = max(counts)
+    if hi == 0:
+        return "." * len(counts)
+    span = len(chars) - 1
+    result = []
+    for value in counts:
+        ratio = value / hi
+        idx = min(span, max(0, int(round(ratio * span))))
+        result.append(chars[idx])
+    return "".join(result)
+
+
+def _daily_history(daily_counts, today, days=30):
+    history = []
+    for i in range(days - 1, -1, -1):
+        day = today - timedelta(days=i)
+        history.append({
+            "date": day.isoformat(),
+            "label": day.strftime("%b %-d"),
+            "count": daily_counts.get(day, 0),
+        })
+    return history
 
 
 def _streak(tests):
@@ -169,19 +200,48 @@ def compute_stats(profile):
         "statements_completed": len(statements),
         "statements_today": 0,
         "statements_streak": 0,
+        "statements_sources": [],
+        "daily_history": [],
+        "daily_plot": "",
+        "daily_plot_start": "",
+        "daily_plot_end": "",
+        "daily_plot_max": 0,
     }
 
     today = date.today()
     stmt_dates = set()
+    stmt_daily_counts = {}
+    source_counts = {}
     for ev in statements:
+        label = ev.get("source_label") or ev.get("source_id") or "statements"
+        info = source_counts.setdefault(label, {"label": label, "total": 0, "today": 0})
+        info["total"] += 1
+
         ts = ev.get("ts", "")
         try:
             d = date.fromisoformat(ts[:10])
         except (ValueError, TypeError):
             continue
         stmt_dates.add(d)
+        stmt_daily_counts[d] = stmt_daily_counts.get(d, 0) + 1
         if d == today:
             s["statements_today"] += 1
+            info["today"] += 1
+
+    if source_counts:
+        s["statements_sources"] = sorted(
+            source_counts.values(),
+            key=lambda entry: (-entry["total"], entry["label"]),
+        )
+
+    history = _daily_history(stmt_daily_counts, today)
+    s["daily_history"] = history
+    if history:
+        counts_only = [item["count"] for item in history]
+        s["daily_plot"] = _inline_plot(counts_only)
+        s["daily_plot_start"] = history[0]["label"]
+        s["daily_plot_end"] = history[-1]["label"]
+        s["daily_plot_max"] = max(counts_only)
 
     if stmt_dates:
         day = today if today in stmt_dates else max(stmt_dates)

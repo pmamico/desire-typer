@@ -15,16 +15,16 @@
       {
         packages = {
           default = python.pkgs.buildPythonApplication {
-            pname = "typer-cli-tool";
-            version = "0.6.0";
+            pname = "desire-typer";
+            version = "1.0.0";
             src = ./.;
             format = "pyproject";
 
             nativeBuildInputs = [ python.pkgs.setuptools ];
 
             meta = {
-              description = "Typing practice in your terminal";
-              homepage = "https://github.com/William-Ger/typer";
+              description = "Desire statement typing in your terminal";
+              homepage = "https://github.com/pmamico/desire-typer";
               license = pkgs.lib.licenses.mit;
               mainProgram = "typer";
             };

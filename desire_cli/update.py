@@ -7,11 +7,11 @@ import time
 from urllib.request import urlopen, Request
 from urllib.error import URLError
 
-from typer_cli import __version__
+from desire_cli import __version__
 
-REPO = "William-Ger/typer"
+REPO = "pmamico/desire-typer"
 API_URL = f"https://api.github.com/repos/{REPO}/releases/latest"
-CACHE_DIR = os.path.expanduser("~/.config/typer")
+CACHE_DIR = os.path.expanduser("~/.config/desire-typer")
 CACHE_FILE = os.path.join(CACHE_DIR, "update_cache.json")
 CHECK_INTERVAL = 86400  # 1 day in seconds
 
@@ -100,6 +100,6 @@ def get_update_info():
     if info["install_method"] == "brew":
         info["update_cmd"] = "brew update && brew upgrade desire"
     else:
-        info["update_cmd"] = "pip install --upgrade typer-cli-tool"
+        info["update_cmd"] = "pip install --upgrade desire-typer"
 
     return info

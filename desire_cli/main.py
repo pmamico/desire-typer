@@ -4,13 +4,13 @@ import argparse
 import sys
 import locale
 
-from typer_cli.sentences import generate
-from typer_cli.update import get_update_info
-from typer_cli.profile import (
+from desire_cli.sentences import generate
+from desire_cli.update import get_update_info
+from desire_cli.profile import (
     profile_exists, read_profile, create_profile, append_statement,
     get_theme, set_theme,
 )
-from typer_cli.themes import THEMES, THEME_NAMES
+from desire_cli.themes import THEMES, THEME_NAMES
 
 
 locale.setlocale(locale.LC_ALL, "")
@@ -28,6 +28,8 @@ C_BORDER = 8
 C_GOOD = 9
 C_BAD = 10
 C_HINT = 11
+
+DEFAULT_SOURCE_ID = "__legacy__"
 
 
 def init_colors(theme_name="default"):
@@ -96,22 +98,56 @@ def _count_errors(target, typed):
     return sum(1 for i in range(n) if typed[i] != target[i])
 
 
-def draw_stats(scr, y, w, reps, errs, today):
-    bar = f"{reps} reps   {today} today   {errs} err"
-    sx = cx(w, len(bar))
+def _build_statement_counts(events, today_str):
+    counts = {}
+    for ev in events:
+        key = ev.get("source_id") or DEFAULT_SOURCE_ID
+        info = counts.setdefault(key, {"total": 0, "today": 0})
+        info["total"] += 1
+        ts = str(ev.get("ts", ""))[:10]
+        if ts == today_str:
+            info["today"] += 1
+    return counts
+
+
+def draw_stats(scr, y, w, total, daily, errs, label=None):
+    label_str = str(label) if label else ""
+    daily_str = str(daily)
+    total_str = str(total)
+    err_str = str(errs)
+    spacer = "   "
+    today_suffix = " today   "
+    total_suffix = " total   "
+    err_suffix = " err"
+    label_len = len(label_str) + len(spacer) if label else 0
+    bar_len = (
+        label_len
+        + len(daily_str)
+        + len(today_suffix)
+        + len(total_str)
+        + len(total_suffix)
+        + len(err_str)
+        + len(err_suffix)
+    )
+    sx = cx(w, bar_len)
     px = sx
-    put(scr, y, px, str(reps), C_ACCENT, curses.A_BOLD)
-    px += len(str(reps))
-    put(scr, y, px, " reps   ", C_DIM)
-    px += 8
-    put(scr, y, px, str(today), C_STAT, curses.A_BOLD)
-    px += len(str(today))
-    put(scr, y, px, " today   ", C_DIM)
-    px += 9
+    if label:
+        put(scr, y, px, label_str, C_TITLE, curses.A_BOLD)
+        px += len(label_str)
+        put(scr, y, px, spacer, C_DIM)
+        px += len(spacer)
+    put(scr, y, px, daily_str, C_STAT, curses.A_BOLD)
+    px += len(daily_str)
+    put(scr, y, px, today_suffix, C_DIM)
+    px += len(today_suffix)
+    put(scr, y, px, total_str, C_ACCENT, curses.A_BOLD)
+    px += len(total_str)
+    put(scr, y, px, total_suffix, C_DIM)
+    px += len(total_suffix)
     ec = C_BAD if errs > 0 else C_GOOD
-    put(scr, y, px, str(errs), ec, curses.A_BOLD)
-    px += len(str(errs))
-    put(scr, y, px, " err", C_DIM)
+    put(scr, y, px, err_str, ec, curses.A_BOLD)
+    px += len(err_str)
+    put(scr, y, px, err_suffix, C_DIM)
 
 
 # ── text drawing ─────────────────────────────────────────────────────────────
@@ -162,19 +198,23 @@ def test(scr, update_info=None, theme_name="default"):
     scr.timeout(50)
     curses.mousemask(curses.ALL_MOUSE_EVENTS | curses.REPORT_MOUSE_POSITION)
 
-    target = generate(1, "medium")
+    statement_entry = generate(1, "medium")
+    target = statement_entry.text
+    source_id = statement_entry.source_id or DEFAULT_SOURCE_ID
+    source_label = statement_entry.source_label or "statements"
     typed = []
     started = False
     stats_y = 0
     hint_y = 0
-    user_name = read_profile().get("name", "")
-    reps = 0
-    today = 0
     today_str = time.strftime("%Y-%m-%d")
-    try:
-        today = sum(1 for ev in read_profile().get("statements", []) if str(ev.get("ts", ""))[:10] == today_str)
-    except Exception:
-        today = 0
+    profile = read_profile()
+    user_name = profile.get("name", "")
+    statements = profile.get("statements", [])
+    statement_counts = _build_statement_counts(statements, today_str)
+    file_counts = statement_counts.setdefault(source_id, {"total": 0, "today": 0})
+    total_count = file_counts["total"]
+    daily_count = file_counts["today"]
+    completion_logged = False
 
     while True:
         scr.erase()
@@ -217,7 +257,7 @@ def test(scr, update_info=None, theme_name="default"):
                 put(scr, h - 1, w - len(user_name) - 1, user_name, C_DIM)
         else:
             errs = _count_errors(target, typed)
-            draw_stats(scr, stats_y, w, reps, errs, today)
+            draw_stats(scr, stats_y, w, total_count, daily_count, errs, source_label)
             cpos = draw_text(scr, lines, typed, target, text_y, tx, aw, h)
             putc(scr, h - 1, w, "tab new statement   esc quit", C_HINT)
 
@@ -276,12 +316,20 @@ def test(scr, update_info=None, theme_name="default"):
             elif isinstance(k, int) and 32 <= k <= 126:
                 typed.append(chr(k))
 
-        if len(typed) == len(target) and "".join(typed) == target:
-            reps += 1
-            append_statement(target)
+        completed_now = False
+        if len(typed) == len(target):
+            completed_now = "".join(typed) == target
+
+        if completed_now and not completion_logged:
+            append_statement(target, source_id=source_id, source_label=source_label)
+            file_counts["total"] += 1
+            total_count = file_counts["total"]
             if time.strftime("%Y-%m-%d") == today_str:
-                today += 1
-            typed = []
+                file_counts["today"] += 1
+            daily_count = file_counts["today"]
+            completion_logged = True
+        elif not completed_now:
+            completion_logged = False
 
     sys.stdout.write("\033[0 q")
     sys.stdout.flush()
@@ -350,7 +398,7 @@ def name_prompt(scr, existing=""):
 # ── stats screen ─────────────────────────────────────────────────────────────
 
 def show_stats(scr):
-    from typer_cli.profile import read_profile, set_name, compute_stats
+    from desire_cli.profile import read_profile, set_name, compute_stats
 
     curses.curs_set(0)
     scr.nodelay(False)
@@ -378,7 +426,7 @@ def show_stats(scr):
         lx = cx(w, dw)
         rx = lx + dw // 2
 
-        content_h = 22
+        content_h = 26
         y = max(1, (h - content_h) // 2)
 
         # title
@@ -395,82 +443,63 @@ def show_stats(scr):
         hline(scr, y, cx(w, dw), dw)
         y += 2
 
-        if stats["tests_completed"] == 0 and stats.get("statements_completed", 0) == 0:
+        if stats.get("statements_completed", 0) == 0:
             putc(scr, y, w, "no stats yet -- start typing!", C_DIM)
         else:
-            # tests + total time
-            put(scr, y, lx, "tests  ", C_DIM)
-            put(scr, y, lx + 7, str(stats["tests_completed"]), C_STAT, curses.A_BOLD)
-            put(scr, y, rx, "total time  ", C_DIM)
-            put(scr, y, rx + 12, stats["total_time_fmt"], C_STAT, curses.A_BOLD)
+            label_width = 13
+            summary_specs = [
+                ("total count", str(stats.get("statements_completed", 0)), C_ACCENT),
+                ("daily count", str(stats.get("statements_today", 0)), C_STAT),
+            ]
+            streak_val = stats.get("statements_streak", 0)
+            streak_str = f"{streak_val} day{'s' if streak_val != 1 else ''}"
+            summary_specs.append(("streak", streak_str, C_ACCENT if streak_val > 0 else C_DIM))
+
+            for text, value, color in summary_specs:
+                put(scr, y, lx, text.ljust(label_width), C_DIM)
+                put(scr, y, lx + label_width + 1, value, color, curses.A_BOLD)
+                y += 1
+
             y += 1
 
-            put(scr, y, lx, "statements ", C_DIM)
-            put(scr, y, lx + 11, str(stats.get("statements_completed", 0)), C_ACCENT, curses.A_BOLD)
-            put(scr, y, rx, "today  ", C_DIM)
-            put(scr, y, rx + 7, str(stats.get("statements_today", 0)), C_STAT, curses.A_BOLD)
-            y += 1
+            plot = stats.get("daily_plot", "")
+            if plot:
+                put(scr, y, lx, "last 30d".ljust(label_width), C_DIM)
+                put(scr, y, lx + label_width + 1, plot, C_ACCENT, curses.A_BOLD)
+                y += 1
 
-            put(scr, y, lx, "stmt streak ", C_DIM)
-            put(scr, y, lx + 11, f"{stats.get('statements_streak', 0)} day{'s' if stats.get('statements_streak', 0) != 1 else ''}", C_ACCENT if stats.get('statements_streak', 0) > 0 else C_DIM, curses.A_BOLD)
-            y += 2
+                start_label = stats.get("daily_plot_start", "")
+                end_label = stats.get("daily_plot_end", "")
+                axis_x = lx + label_width + 1
+                if start_label:
+                    put(scr, y, axis_x, start_label, C_DIM)
+                if end_label and len(plot) >= len(end_label):
+                    put(scr, y, axis_x + len(plot) - len(end_label), end_label, C_DIM)
+                y += 1
 
-            # best wpm
-            put(scr, y, lx, "best   ", C_DIM)
-            if stats["best_wpm"] is not None:
-                put(scr, y, lx + 7, f"{stats['best_wpm']:.0f} wpm", C_ACCENT, curses.A_BOLD)
-                ctx = f"({stats['best_wpm_diff']}, {stats['best_wpm_date']})"
-                put(scr, y, rx, ctx, C_DIM)
-            y += 1
-
-            # avg wpm (last 10)
-            put(scr, y, lx, "avg    ", C_DIM)
-            if stats["avg_wpm_recent"] is not None:
-                put(scr, y, lx + 7, f"{stats['avg_wpm_recent']:.0f} wpm", C_STAT, curses.A_BOLD)
-                put(scr, y, rx, "(last 10 tests)", C_DIM)
-            y += 1
-
-            # avg accuracy
-            put(scr, y, lx, "acc    ", C_DIM)
-            if stats["avg_acc"] is not None:
-                acp = C_GOOD if stats["avg_acc"] >= 90 else C_BAD
-                put(scr, y, lx + 7, f"{stats['avg_acc']:.1f}%", acp, curses.A_BOLD)
-            y += 1
-
-            # streak
-            put(scr, y, lx, "streak ", C_DIM)
-            sv = stats["streak"]
-            scp = C_ACCENT if sv > 0 else C_DIM
-            put(scr, y, lx + 7, f"{sv} day{'s' if sv != 1 else ''}", scp, curses.A_BOLD)
-            y += 2
+                max_day = stats.get("daily_plot_max", 0)
+                put(scr, y, lx, "max/day".ljust(label_width), C_DIM)
+                put(scr, y, lx + label_width + 1, str(max_day), C_STAT)
+                y += 2
 
             # divider
             hline(scr, y, cx(w, dw), dw)
             y += 2
 
-            # sparkline
-            if stats["sparkline"]:
-                label = "last 10  "
-                sl = stats["sparkline"]
-                sx = cx(w, len(label) + len(sl))
-                put(scr, y, sx, label, C_DIM)
-                put(scr, y, sx + len(label), sl, C_ACCENT, curses.A_BOLD)
-                y += 2
-
-                # divider
-                hline(scr, y, cx(w, dw), dw)
-                y += 2
-
-            # per-difficulty breakdown
-            diff_colors = {"easy": C_GOOD, "medium": C_STAT, "hard": C_BAD}
-            for diff_name in ("easy", "medium", "hard"):
-                diff_avg = stats["per_diff"].get(diff_name)
-                put(scr, y, lx, f"{diff_name:8s}", C_DIM)
-                if diff_avg is not None:
-                    put(scr, y, lx + 8, f"{diff_avg:.0f} wpm", diff_colors[diff_name], curses.A_BOLD)
-                else:
-                    put(scr, y, lx + 8, "--", C_DIM)
+            sources = stats.get("statements_sources", [])
+            if sources:
+                put(scr, y, w, "statement counts", C_TITLE, curses.A_BOLD)
                 y += 1
+                label_width_src = max(10, dw - 20)
+                for entry in sources:
+                    if y >= h - 2:
+                        break
+                    label = entry.get("label") or "statements"
+                    label_display = label if len(label) <= label_width_src else label[:label_width_src]
+                    put(scr, y, lx, label_display.ljust(label_width_src), C_ACCENT)
+                    counts_str = f"{entry['total']:>4} total   {entry['today']:>3} today"
+                    put(scr, y, lx + label_width_src + 2, counts_str, C_STAT)
+                    y += 1
 
         # bottom hint
         putc(scr, h - 1, w, "n change name   esc back", C_HINT)
