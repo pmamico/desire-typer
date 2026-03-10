@@ -10,10 +10,10 @@ This project is inspired by the “Desire Statement” mental training tool from
 
 ## Install
 
-### pip
+[https://pypi.org/project/desire-typer/](https://pypi.org/project/desire-typer/)  
 
 ```bash
-python3 -m pip install --upgrade desire-typer
+pipx install desire-typer
 ```
 
 ### local
@@ -21,13 +21,6 @@ python3 -m pip install --upgrade desire-typer
 ```bash
 python3 -m pip install -e .
 ```
-
-`pipx` also works well for CLI tools:
-
-```bash
-pipx install .
-```
-
 
 ## Run
 
@@ -38,7 +31,7 @@ desire
 Or, if you prefer module execution:
 
 ```bash
-python -m desire
+python3 -m desire
 ```
 
 ## Statements Folder
@@ -73,12 +66,6 @@ does the work even when I do not feel like it.
 
 - Statements: `~/.statements/`
 - Local profile/stats: `~/.config/typer/profile.json` (legacy path name)
-
-## Update
-
-```bash
-python3 -m pip install --upgrade desire-typer
-```
 
 ## Platform Notes
 
